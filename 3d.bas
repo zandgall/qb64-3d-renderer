@@ -13,20 +13,29 @@ Dim Shared x As Double, y As Double, z As Double
 ' Write your Call applyRotation(x, y, z)
 Dim Shared useX As Double, useY As Double, useZ As Double
 
-' Shared triangle variables. Used to store variables across functions and subs]
+' Shared triangle variables. Used to store variables across functions and subs
 Dim Shared tri_u As Double, tri_v As Double, tri_w As Double
 Dim Shared tri_x1 As Double, tri_x2 As Double, tri_x3 As Double
 Dim Shared tri_y1 As Double, tri_y2 As Double, tri_y3 As Double
 Dim Shared tri_d1 As Double, tri_d2 As Double, tri_d3 As Double
 Dim Shared tri_area As Double, tri_one_over_area As Double
 
+' Trigonomotry lookup function variables
+Dim Shared fastTrigResolution As Double, fastTrigLength As Integer, oneOverFastTrigResolution As Double
+fastTrigResolution = 0.001
+fastTrigLength = Fix(2 * 3.14159265359 / fastTrigResolution)
+oneOverFastTrigResolution = 1 / fastTrigResolution
+Dim Shared cosLookup(fastTrigLength) As Double
+Dim Shared sinLookup(fastTrigLength) As Double
+For i = 0 To 2 * 3.14159265359 Step fastTrigResolution
+    cosLookup(i * oneOverFastTrigResolution) = Cos(i)
+    sinLookup(i * oneOverFastTrigResolution) = Sin(i)
+Next
+
 ' time is incremented by 0.1 every frame
 ' Resolution is the step of the triangle; ex a resolution of 4 will draw pixels 4x4 wide
-Dim Shared time As Double, resolution As Double, one_over_resolution As Double
-resolution = 1
-one_over_resolution = 1 / resolution
-
-' The 20.00 in this statement is the FOV Angle
+Dim Shared time As Double, resolution As Double, one_over_resolution As Double, currentFrames As Integer
+' The 20.0 in this statement is the FOV Angle
 FOV = 1.0 / Tan(20.0 * 0.5 * 3.14159265359 / 180.0)
 Far = 100
 Near = 0.1
@@ -34,7 +43,15 @@ ZMul = -Far / (Far - Near)
 ZAdd = -Far * Near / (Far - Near)
 
 
+' Variables to change!
+resolution = 1
+
+' (Don't change this one)
+one_over_resolution = 1 / resolution
+
+
 time = 0
+currentFrames = 0
 
 x = 0
 y = 0
@@ -49,16 +66,25 @@ RZ = 0
 Dim Shared Depth((SIZE / resolution) ^ 2) As Double
 Dim Shared DepthTime((SIZE / resolution) ^ 2) As Double
 
+Dim Shared lastTime As Double, fps As Integer
+lastTime = 0
 ' Rotation in X, Y, and Z
 Dim RX As Double, RY As Double, RZ As Double
 
 Do
+    ' IF there's a change in seconds, then update the FPS variable
+    If lastTime < Fix(Timer) Then
+        lastTime = Fix(Timer)
+        fps = currentFrames
+        currentFrames = 0
+    End If
+    currentFrames = currentFrames + 1
+
+
+    ' Clear the screen
     Cls
-    ' Avoided using DepthTime
-    'For i = 0 To (SIZE/resolution) ^ 2
-    'Depth(i) = 0
-    'Next
-    Print time ' Optional, was used to show how fast each frame was happening
+
+    Print time; "FPS:"; fps ' Optional, was used to show how fast each frame was happening
 
     ' Color _RGB(255, 120, 0) 'Comment out colors in triangles in order to have single solid-color cubes
     Call cube(-10 + x, -10 + y, -50 + z, 20, 20, 20, RX, RY, RZ)
@@ -84,6 +110,22 @@ Do
     ' Sleep 10
 
 Loop
+
+' A Cos lookup function
+Function fCos (theta)
+    If Sgn(theta) < 0 Then
+        fCos = cosLookup(fastTrigLength + (Fix(theta * oneOverFastTrigResolution) Mod fastTrigLength))
+    Else fCos = cosLookup(Fix(theta * oneOverFastTrigResolution) Mod fastTrigLength)
+    End If
+End Function
+' A Sin lookup function
+Function fSin (theta)
+    If Sgn(theta) < 0 Then
+        fSin = sinLookup(fastTrigLength + (Fix(theta * oneOverFastTrigResolution) Mod fastTrigLength))
+    Else fSin = sinLookup(Fix(theta * oneOverFastTrigResolution) Mod fastTrigLength)
+    End If
+End Function
+
 
 ' A function that snaps a number to the resolution grid
 Function snap (snapnum)
@@ -232,15 +274,15 @@ Function proj (pr_x, pr_z)
     za = pr_z * ZMul + ZAdd
     za = max(za, 0.0001)
     xa = (pr_x * FOV) / za
-    proj = xa * SIZE / 10.0 + SIZE / 2.0 ' Translates output to center of the screen, and scales it a bit
+    proj = xa * SIZE * 0.1 + SIZE * 0.5 ' Translates output to center of the screen, and scales it a bit
 End Function
 
 ' Applies rotation to useX, Y, and Z
 Sub applyRotation (rx, ry, rz)
     ' Rotation
-    outX = (useX * Cos(rz) * Cos(ry)) + (useY * Sin(rz) * Cos(ry)) - (useZ * Sin(ry))
-    outY = (useX * (Cos(rz) * Sin(ry) * Sin(rx) - Sin(rz) * Cos(rx))) + (useY * (Sin(rz) * Sin(ry) * Sin(rx) + Cos(rz) * Cos(rx))) + (useZ * Cos(ry) * Sin(rx))
-    outZ = (useX * (Cos(rz) * Sin(ry) * Cos(rx) + Sin(rz) * Sin(rx))) + (useY * (Sin(rz) * Sin(ry) * Cos(rx) - Cos(rz) * Sin(rx))) + (useZ * Cos(ry) * Cos(rx))
+    outX = (useX * fCos(rz) * fCos(ry)) + (useY * fSin(rz) * fCos(ry)) - (useZ * fSin(ry))
+    outY = (useX * (fCos(rz) * fSin(ry) * fSin(rx) - fSin(rz) * fCos(rx))) + (useY * (fSin(rz) * fSin(ry) * fSin(rx) + fCos(rz) * fCos(rx))) + (useZ * fCos(ry) * fSin(rx))
+    outZ = (useX * (fCos(rz) * fSin(ry) * fCos(rx) + fSin(rz) * fSin(rx))) + (useY * (fSin(rz) * fSin(ry) * fCos(rx) - fCos(rz) * fSin(rx))) + (useZ * fCos(ry) * fCos(rx))
 
     ' Output
     useX = outX
@@ -403,22 +445,27 @@ Sub fast_tri_2d (x1, y1, x2, y2, x3, y3)
         m = x2 + (y1 - y2) * (x3 - x2) / (y3 - y2)
         Call ft_tri(x2, y2, x1, m, y1)
         Call fb_tri(x3, y3, x1, m, y1)
+        GoTo ft2dskip
     ElseIf y1 > y2 And y1 < y3 Then
         m = x2 + (y1 - y2) * (x3 - x2) / (y3 - y2)
         Call ft_tri(x3, y3, x1, m, y1)
         Call fb_tri(x2, y2, x1, m, y1)
+        GoTo ft2dskip
     ElseIf y2 < y1 And y2 > y3 Then
         m = x1 + (y2 - y1) * (x3 - x1) / (y3 - y1)
         Call ft_tri(x1, y1, x2, m, y2)
         Call fb_tri(x3, y3, x2, m, y2)
+        GoTo ft2dskip
     ElseIf y2 > y1 And y2 < y3 Then
         m = x1 + (y2 - y1) * (x3 - x1) / (y3 - y1)
         Call ft_tri(x3, y3, x2, m, y2)
         Call fb_tri(x1, y1, x2, m, y2)
+        GoTo ft2dskip
     ElseIf y3 < y1 And y3 > y2 Then
         m = x1 + (y3 - y1) * (x2 - x1) / (y2 - y1)
         Call ft_tri(x1, y1, x3, m, y3)
         Call fb_tri(x2, y2, x3, m, y3)
+        GoTo ft2dskip
     ElseIf y3 > y1 And y3 < y2 Then
         m = x1 + (y3 - y1) * (x2 - x1) / (y2 - y1)
         Call ft_tri(x2, y2, x3, m, y3)
@@ -434,5 +481,5 @@ Sub fast_tri (x1, y1, z1, x2, y2, z2, x3, y3, z3)
     tri_d3 = z3
 
     ' Run 2d triangle rasterization at the projected points given, snapped to the resolution grid
-    Call fast_tri_2d(snap(proj(x1, z1)), snap(proj(y1, z1)), snap(proj(x2, z2)), snap(proj(y2, z2)), snap(proj(x3, z3)), snap(proj(y3, z3)))
+    Call fast_tri_2d((proj(x1, z1)), snap(proj(y1, z1)), (proj(x2, z2)), snap(proj(y2, z2)), (proj(x3, z3)), snap(proj(y3, z3)))
 End Sub
