@@ -308,17 +308,17 @@ End Function
 
 ' Was used in setUVW to calculate areas of sub-triangles.
 Function edge (e_x1, e_y1, e_x2, e_y2, e_x3, e_y3)
-    edge = ((e_x3 - e_x1) * (e_y2 - e_y1)) - ((e_y3 - e_y1) * (e_x2 - e_x1))
+    edge = 0.5 * ((e_x3 - e_x1) * (e_y2 - e_y1)) - ((e_y3 - e_y1) * (e_x2 - e_x1))
 End Function
 
 ' Sets the barycentric coords of a point
 Sub setUVW (uvwx, uvwy)
     'tri_u = edge(x, y, tri_x2, tri_y2, tri_x3, tri_y3) * tri_one_over_area
-    tri_u = (((tri_x3 - uvwx) * (tri_y2 - uvwy)) - ((tri_y3 - uvwy) * (tri_x2 - uvwx))) * tri_one_over_area
+    tri_u = 0.5 * (((tri_x3 - uvwx) * (tri_y2 - uvwy)) - ((tri_y3 - uvwy) * (tri_x2 - uvwx))) * tri_one_over_area
     'tri_v = edge(x, y, tri_x3, tri_y3, tri_x1, tri_y1) * tri_one_over_area
-    tri_v = (((tri_x1 - uvwx) * (tri_y3 - uvwy)) - ((tri_y1 - uvwy) * (tri_x3 - uvwx))) * tri_one_over_area
+    tri_v = 0.5 * (((tri_x1 - uvwx) * (tri_y3 - uvwy)) - ((tri_y1 - uvwy) * (tri_x3 - uvwx))) * tri_one_over_area
     'tri_w = edge(x, y, tri_x1, tri_y1, tri_x2, tri_y2) * tri_one_over_area
-    tri_w = (((tri_x2 - uvwx) * (tri_y1 - uvwy)) - ((tri_y2 - uvwy) * (tri_x1 - uvwx))) * tri_one_over_area
+    tri_w = 0.5 * (((tri_x2 - uvwx) * (tri_y1 - uvwy)) - ((tri_y2 - uvwy) * (tri_x1 - uvwx))) * tri_one_over_area
 End Sub
 
 ' Draws a triangle with a flat top, from (x1, y1) to (x2, bottom) to (x3, bottom) ; yes bottom is actually the "top" but it's named bottom okay
